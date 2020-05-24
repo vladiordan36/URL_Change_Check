@@ -1,8 +1,5 @@
 package com.iordanvlad.urlchangecheck;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
@@ -10,16 +7,22 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
-import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.work.Constraints;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,19 +33,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity class";
     private static final int LAUNCH_POPUP_ACTIVITY = 107;
+    private static final String UCC_WORK_NAME = "Periodic url change check";
     ArrayList<String> url_data_list = new ArrayList<>();
     ArrayAdapter adapter;
 
@@ -54,20 +53,22 @@ public class MainActivity extends AppCompatActivity {
         ListView list = findViewById(R.id.url_list);
         Button popup_button = findViewById(R.id.add_popup);
 
-        if(isReadStoragePermissionGranted()){
+        if(isReadStoragePermissionGranted() && isWriteStoragePermissionGranted()){
             readElementsFromFile();
         }
 
-        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_2, android.R.id.text1, url_data_list) {
+        adapter = new ArrayAdapter(this, R.layout.list_item, R.id.list_name, url_data_list) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
-                TextView text1 = (TextView) view.findViewById(android.R.id.text1);
-                TextView text2 = (TextView) view.findViewById(android.R.id.text2);
+                TextView name = (TextView) view.findViewById(R.id.list_name);
+                TextView url = (TextView) view.findViewById(R.id.list_url);
+                TextView lastUpdate = (TextView) view.findViewById(R.id.list_lastUpdate);
 
                 try {
-                    text1.setText(new JSONObject(url_data_list.get(position)).getString("name"));
-                    text2.setText(new JSONObject(url_data_list.get(position)).getString("url"));
+                    name.setText(new JSONObject(url_data_list.get(position)).getString("name"));
+                    url.setText(new JSONObject(url_data_list.get(position)).getString("url"));
+                    lastUpdate.setText(new JSONObject(url_data_list.get(position)).getString("lastUpdate"));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -75,6 +76,8 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         list.setAdapter(adapter);
+
+        setUpUrlCheckJob();
 
         popup_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -97,6 +100,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    public void setUpUrlCheckJob() {
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+        final PeriodicWorkRequest periodicWorkRequest
+                = new PeriodicWorkRequest.Builder(UrlChangeWorker.class, 15, TimeUnit.MINUTES)
+                //.setConstraints(constraints)
+                .build();
+
+        WorkManager.getInstance().enqueueUniquePeriodicWork(
+                UCC_WORK_NAME,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                periodicWorkRequest
+        );
     }
 
     public void readElementsFromFile() {

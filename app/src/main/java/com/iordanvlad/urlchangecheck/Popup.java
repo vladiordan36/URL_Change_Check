@@ -27,14 +27,19 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 public class Popup extends Activity {
 
     private static final String TAG = "Popup class";
-    private static final String FIELDS_ERROR = "Both fields are required!";
+    private static final String NAME_ERROR = "Name is required!";
+    private static final String URL_ERROR = "URL is required!";
     private static final String DUPLICATE_ERROR = "This URL is already monitored!";
     private static final String INVALID_URL_ERROR = "This URL is invalid!";
+
     ArrayList<String> url_data_list = new ArrayList<>();
     int position;
     String operation;
@@ -110,12 +115,15 @@ public class Popup extends Activity {
         int size = html.length();
 
         try {
+            LocalDateTime now = LocalDateTime.now();
+            String now_date = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(now);
             if (operation.equals("edit")) {
                 JSONObject json = new JSONObject(url_data_list.get(position));
                 json.put("name", name);
                 json.put("url", url);
                 json.put("hash", hash);
                 json.put("size", size);
+                json.put("lastUpdate", now_date);
                 url_data_list.set(position, json.toString());
             } else {
                 JSONObject json = new JSONObject();
@@ -123,6 +131,7 @@ public class Popup extends Activity {
                 json.put("url", url);
                 json.put("hash", hash);
                 json.put("size", size);
+                json.put("lastUpdate", now_date);
                 url_data_list.add(json.toString());
             }
         } catch (JSONException e) {
@@ -153,11 +162,14 @@ public class Popup extends Activity {
         String url = url_value.getText().toString();
 
 
-        if (!URLUtil.isValidUrl(url)){
-            url_error.setText(INVALID_URL_ERROR);
+        if (name.isEmpty()){
+            url_error.setText(URL_ERROR);
             return false;
-        } else if (name.isEmpty() || url.isEmpty()) {
-            url_error.setText(FIELDS_ERROR);
+        } else if (url.isEmpty() ) {
+            url_error.setText(NAME_ERROR);
+            return false;
+        } else if (!URLUtil.isValidUrl(url)) {
+            url_error.setText(INVALID_URL_ERROR);
             return false;
         } else if (checkUrl(url) >= 0 && !operation.equals("edit")) {
             url_error.setText(DUPLICATE_ERROR);
@@ -190,7 +202,7 @@ public class Popup extends Activity {
         getWindowManager().getDefaultDisplay().getMetrics(dm);
 
         int width = (int) (dm.widthPixels * 0.9);
-        int height = (int) (dm.heightPixels * 0.45);
+        int height = (int) (dm.heightPixels * 0.5);
 
         getWindow().setLayout(width, height);
     }
