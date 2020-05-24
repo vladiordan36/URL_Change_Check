@@ -66,9 +66,10 @@ public class MainActivity extends AppCompatActivity {
                 TextView lastUpdate = (TextView) view.findViewById(R.id.list_lastUpdate);
 
                 try {
-                    name.setText(new JSONObject(url_data_list.get(position)).getString("name"));
-                    url.setText(new JSONObject(url_data_list.get(position)).getString("url"));
-                    lastUpdate.setText(new JSONObject(url_data_list.get(position)).getString("lastUpdate"));
+                    JSONObject json = new JSONObject(url_data_list.get(position));
+                    name.setText("Name : " + json.getString("name"));
+                    url.setText("URL : " + json.getString("url"));
+                    lastUpdate.setText("Last updated at : " + json.getString("lastUpdate"));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
