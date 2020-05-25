@@ -2,10 +2,15 @@ package com.iordanvlad.urlchangecheck;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.FileObserver;
+import android.os.Handler;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,6 +40,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
@@ -44,6 +50,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String UCC_WORK_NAME = "Periodic url change check";
     ArrayList<String> url_data_list = new ArrayList<>();
     ArrayAdapter adapter;
+
+    Handler mHandler = new Handler();
+    Thread downloadThread;
+
+    boolean isRunning = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,7 +89,9 @@ public class MainActivity extends AppCompatActivity {
         };
         list.setAdapter(adapter);
 
-        setUpUrlCheckJob();
+        updateUI();
+        //setUpUrlCheckJob();
+        setUpAlarm();
 
         popup_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -103,6 +116,41 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void updateUI(){
+        downloadThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (isRunning) {
+                    try {
+                        Thread.sleep(10000);
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                readElementsFromFile();
+                                adapter.notifyDataSetChanged();
+                            }
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        downloadThread.start();
+    }
+
+    public void setUpAlarm(){
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
+        Intent intent = new Intent(MainActivity.this, UrlCheckAlarm.class);
+        PendingIntent pIntent = PendingIntent.getBroadcast(MainActivity.this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager aManager = (AlarmManager) getSystemService(MainActivity.ALARM_SERVICE);
+        aManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 5000, pIntent);
+    }
+
     public void setUpUrlCheckJob() {
         Constraints constraints = new Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -121,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void readElementsFromFile() {
         try {
-            String path = Environment.getExternalStorageDirectory().toString() + "/";
+            String path = Environment.getExternalStorageDirectory().getPath() + "/";
             File directory = new File(path + "UrlChangeCheck");
             String filename = "monitored_urls.txt";
             File file = new File(directory, filename);
@@ -151,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void writeUrlsToFile() {
         try {
-            String path = Environment.getExternalStorageDirectory().toString() + "/";
+            String path = Environment.getExternalStorageDirectory().getPath() + "/";
             File directory = new File(path + "UrlChangeCheck");
             String filename = "monitored_urls.txt";
             File file = new File(directory, filename);
@@ -226,28 +274,19 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 3) {
             Log.d(TAG, "External storage1");
-            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+            if(grantResults.length > 0 && grantResults[0]== PackageManager.PERMISSION_GRANTED){
                 Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
                 //resume tasks needing this permission
                 readElementsFromFile();
             }
         } else if (requestCode == 2) {
             Log.d(TAG, "External storage2");
-            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+            if(grantResults.length > 0 && grantResults[0]== PackageManager.PERMISSION_GRANTED){
                 Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
                 //resume tasks needing this permission
                 writeUrlsToFile();
             }
         }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if(isReadStoragePermissionGranted()){
-            readElementsFromFile();
-        }
-        adapter.notifyDataSetChanged();
     }
 
     @Override
@@ -264,5 +303,15 @@ public class MainActivity extends AppCompatActivity {
                 adapter.notifyDataSetChanged();
             }
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        Log.d(TAG, "resumed");
+        if(isReadStoragePermissionGranted()){
+            readElementsFromFile();
+        }
+        adapter.notifyDataSetChanged();
     }
 }

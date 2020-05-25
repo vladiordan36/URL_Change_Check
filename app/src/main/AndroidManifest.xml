@@ -18,6 +18,9 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning"
         android:usesCleartextTraffic="true">
+
+        <receiver android:name=".UrlCheckAlarm"/>
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
