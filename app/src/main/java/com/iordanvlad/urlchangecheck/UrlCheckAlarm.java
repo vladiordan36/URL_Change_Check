@@ -64,7 +64,7 @@ public class UrlCheckAlarm extends BroadcastReceiver {
                     int new_size = new_html.length();
                     String new_hash = md5(new_html);
 
-                    if(!new_hash.equals(hash)) {
+                    if(!new_hash.equals(hash) && json.getString("disabled").equals("false")) {
                         LocalDateTime now = LocalDateTime.now();
                         String now_date = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(now);
 

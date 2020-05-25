@@ -6,6 +6,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
@@ -46,14 +47,14 @@ import java.util.concurrent.TimeUnit;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity class";
-    private static final int LAUNCH_POPUP_ACTIVITY = 107;
     private static final String UCC_WORK_NAME = "Periodic url change check";
+    private static final int LAUNCH_POPUP_ACTIVITY = 107;
+
     ArrayList<String> url_data_list = new ArrayList<>();
     ArrayAdapter adapter;
 
     Handler mHandler = new Handler();
-    Thread downloadThread;
-
+    Thread updateThread;
     boolean isRunning = true;
 
     @Override
@@ -81,6 +82,12 @@ public class MainActivity extends AppCompatActivity {
                     name.setText("Name : " + json.getString("name"));
                     url.setText("URL : " + json.getString("url"));
                     lastUpdate.setText("Last updated at : " + json.getString("lastUpdate"));
+
+                    if(json.getString("disabled").equals("false")){
+                        view.setBackgroundColor(Color.CYAN);
+                    } else {
+                        view.setBackgroundColor(Color.RED);
+                    }
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -117,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateUI(){
-        downloadThread = new Thread(new Runnable() {
+        updateThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (isRunning) {
@@ -137,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        downloadThread.start();
+        updateThread.start();
     }
 
     public void setUpAlarm(){

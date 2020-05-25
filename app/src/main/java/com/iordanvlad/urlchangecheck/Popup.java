@@ -56,6 +56,7 @@ public class Popup extends Activity {
 
         Button submit = findViewById(R.id.add_url);
         Button delete = findViewById(R.id.delete_url);
+        Button disable = findViewById(R.id.disable_url);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -77,6 +78,28 @@ public class Popup extends Activity {
                 deleteUrlFromList(position);
             }
         });
+        disable.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                disableUrlFromList(position);
+            }
+        });
+    }
+
+    private void disableUrlFromList(int position) {
+
+        try {
+            JSONObject json = new JSONObject(url_data_list.get(position));
+            json.put("disabled", json.getString("disabled").equals("true") ? "false" : "true");
+            url_data_list.set(position, json.toString());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        Intent returnIntent = new Intent();
+        returnIntent.putExtra("url_data_list", url_data_list);
+        setResult(Activity.RESULT_OK, returnIntent);
+        finish();
     }
 
     private void initializePopup() {
@@ -84,19 +107,28 @@ public class Popup extends Activity {
         final EditText url_value = findViewById(R.id.url_value);
         Button add = findViewById(R.id.add_url);
         Button delete = findViewById(R.id.delete_url);
+        Button disable = findViewById(R.id.disable_url);
 
         if (operation.equals("edit")) {
-            url_name.setEnabled(false);
-            delete.setVisibility(View.VISIBLE);
-            add.setText("Save");
             try {
-                url_name.setText(new JSONObject(url_data_list.get(position)).getString("name"));
-                url_value.setText(new JSONObject(url_data_list.get(position)).getString("url"));
+                JSONObject json = new JSONObject(url_data_list.get(position));
+                url_name.setEnabled(false);
+                delete.setVisibility(View.VISIBLE);
+                disable.setVisibility(View.VISIBLE);
+                add.setText("Save");
+                disable.setText(json.getString("disabled").equals("true") ? "Enable" : "Disable");
+                try {
+                    url_name.setText(json.getString("name"));
+                    url_value.setText(json.getString("url"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         } else {
             delete.setVisibility(View.GONE);
+            disable.setVisibility(View.GONE);
             add.setText("Add");
 
         }
@@ -117,13 +149,16 @@ public class Popup extends Activity {
         try {
             LocalDateTime now = LocalDateTime.now();
             String now_date = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(now);
+
             if (operation.equals("edit")) {
                 JSONObject json = new JSONObject(url_data_list.get(position));
+                String disabled = json.getString("disabled");
                 json.put("name", name);
                 json.put("url", url);
                 json.put("hash", hash);
                 json.put("size", size);
                 json.put("lastUpdate", now_date);
+                json.put("disabled", disabled);
                 url_data_list.set(position, json.toString());
             } else {
                 JSONObject json = new JSONObject();
@@ -132,6 +167,7 @@ public class Popup extends Activity {
                 json.put("hash", hash);
                 json.put("size", size);
                 json.put("lastUpdate", now_date);
+                json.put("disabled", "false");
                 url_data_list.add(json.toString());
             }
         } catch (JSONException e) {
@@ -195,16 +231,6 @@ public class Popup extends Activity {
             }
         }
         return -1;
-    }
-
-    private void setPopupSize() {
-        DisplayMetrics dm = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(dm);
-
-        int width = (int) (dm.widthPixels * 0.9);
-        int height = (int) (dm.heightPixels * 0.5);
-
-        getWindow().setLayout(width, height);
     }
 
     public String getSourceHtml(String url) {
