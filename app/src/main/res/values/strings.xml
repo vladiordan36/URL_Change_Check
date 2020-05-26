@@ -4,5 +4,5 @@
     <string name="add_new_url">Add a new URL</string>
     <string name="name">Entry name</string>
     <string name="url">http://example.com</string>
-    <string name="delete">Delete URL</string>
+    <string name="delete">Delete</string>
 </resources>

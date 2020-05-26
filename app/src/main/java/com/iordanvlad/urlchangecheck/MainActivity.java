@@ -9,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.FileObserver;
 import android.os.Handler;
 import android.os.StrictMode;
 import android.util.Log;
@@ -41,7 +40,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
@@ -51,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int LAUNCH_POPUP_ACTIVITY = 107;
 
     ArrayList<String> url_data_list = new ArrayList<>();
-    ArrayAdapter adapter;
+    ArrayAdapter<String> adapter;
 
     Handler mHandler = new Handler();
     Thread updateThread;
@@ -69,13 +67,13 @@ public class MainActivity extends AppCompatActivity {
             readElementsFromFile();
         }
 
-        adapter = new ArrayAdapter(this, R.layout.list_item, R.id.list_name, url_data_list) {
+        adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.list_item, R.id.list_name, url_data_list) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
-                TextView name = (TextView) view.findViewById(R.id.list_name);
-                TextView url = (TextView) view.findViewById(R.id.list_url);
-                TextView lastUpdate = (TextView) view.findViewById(R.id.list_lastUpdate);
+                TextView name = view.findViewById(R.id.list_name);
+                TextView url = view.findViewById(R.id.list_url);
+                TextView lastUpdate = view.findViewById(R.id.list_lastUpdate);
 
                 try {
                     JSONObject json = new JSONObject(url_data_list.get(position));
